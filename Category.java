@@ -15,7 +15,7 @@ public class Category {
       Connection conn = DB.getDatabaseConnection();
       String query = "INSERT INTO category (category_name) VALUES (?)";
       PreparedStatement stmt = conn.prepareStatement(query);
-      stmt.setString(1, name);
+      stmt.setString(1, new TablePrinter().formatString(name));
 
       stmt.execute();
       conn.close();

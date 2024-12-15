@@ -86,10 +86,12 @@ public class Schema {
       System.out.println("Creating 'student' table...");
       stmt.execute(
           "CREATE TABLE student (" +
-              "student_id int PRIMARY KEY, " +
+              "studentID int NOT NULL, " +
               "username varchar(255) NOT NULL, " +
               "first_name varchar(255) NOT NULL, " +
-              "last_name varchar(255) NOT NULL " +
+              "last_name varchar(255) NOT NULL, " +
+              "PRIMARY KEY(username), " +
+              "UNIQUE(studentID) " +
               ");");
       System.out.println("Successfully created 'student' table");
     } catch (SQLException e) {
@@ -108,11 +110,11 @@ public class Schema {
       System.out.println("Creating 'enrolled_students' table..."); // Class Enrolls Student
       stmt.execute(
           "CREATE TABLE enrolled_students (" +
-              "class_id int NOT NULL,\n" +
-              "student_id int NOT NULL,\n" +
-              "PRIMARY KEY (class_id, student_id),\n" +
-              "FOREIGN KEY (class_id) REFERENCES class(class_id),\n" +
-              "FOREIGN KEY (student_id) REFERENCES student(student_id)\n" +
+              "class_id int NOT NULL, " +
+              "username varchar(255) NOT NULL, " +
+              "PRIMARY KEY (class_id, username), " +
+              "FOREIGN KEY (class_id) REFERENCES class(class_id), " +
+              "FOREIGN KEY (username) REFERENCES student(username) " +
               ");");
       System.out.println("Successfully created 'enrolled_students' table");
 
@@ -146,12 +148,12 @@ public class Schema {
       System.out.println("Creating 'student_class_assignments' table...");
       stmt.execute(
           "CREATE TABLE student_assignments (" + // Student has Assignments
-              "grade double,\n" +
-              "student_id int NOT NULL,\n" +
+              "grade double DEFAULT 0.0,\n" +
+              "username varchar(255) NOT NULL,\n" +
               "class_id int NOT NULL,\n" +
               "assignment_name varchar(255) NOT NULL,\n" +
-              "PRIMARY KEY (student_id, class_id, assignment_name),\n" +
-              "FOREIGN KEY (student_id) REFERENCES student(student_id),\n" +
+              "PRIMARY KEY (username, class_id, assignment_name),\n" +
+              "FOREIGN KEY (username) REFERENCES student(username),\n" +
               "FOREIGN KEY (assignment_name, class_id) REFERENCES assignment(assignment_name, class_id)\n" +
               ");");
       System.out.println("Successfully created 'student_class_assignments' table");
@@ -164,7 +166,6 @@ public class Schema {
   }
 
   // public static void create
-
   public static void main(String[] args) {
     try {
       System.out.println("Creating Schema");

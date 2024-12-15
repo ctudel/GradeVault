@@ -11,7 +11,7 @@ public class Class {
   public Class() {
     this.classId = -1;
     this.course = "";
-    this.term = "";
+    this.term = "Fa24";
     this.section = -1;
     this.description = "";
   }
