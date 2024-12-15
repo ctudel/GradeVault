@@ -86,9 +86,10 @@ public class Schema {
       System.out.println("Creating 'student' table...");
       stmt.execute(
           "CREATE TABLE student (" +
-              "student_id int PRIMARY KEY AUTO_INCREMENT,\n" +
-              "username varchar(255) NOT NULL,\n" +
-              "name varchar(255) NOT NULL\n" +
+              "student_id int PRIMARY KEY, " +
+              "username varchar(255) NOT NULL, " +
+              "first_name varchar(255) NOT NULL, " +
+              "last_name varchar(255) NOT NULL " +
               ");");
       System.out.println("Successfully created 'student' table");
     } catch (SQLException e) {

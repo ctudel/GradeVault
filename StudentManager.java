@@ -8,27 +8,26 @@ import java.sql.Statement;
 public class StudentManager {
 
   // Create a class: new-class CS410 Sp20 1 "Databases
-  public void createStudent(String username, String name) {
+  public void createStudent(int studentID, String username, String firstName, String lastName) {
     try {
-      System.out.println("Adding student to database...");
+      // Validate passed in values
+      if (studentID < 0 || username.isBlank() || firstName.isBlank() || lastName.isBlank())
+        throw new SQLException("Invalid value for at least one column value");
+
       Connection conn = DB.getDatabaseConnection();
 
-      String query = "INSERT INTO student (username, name) VALUES (?,?);";
+      String query = "INSERT INTO student VALUES (?,?,?,?);";
       PreparedStatement stmt = conn.prepareStatement(query);
 
-      // Validate passed in values
-      if (username.isBlank() || name.isBlank())
-        throw new SQLException("course and term cannot be empty values, and section must be positive");
-
-      stmt.setString(1, username);
-      stmt.setString(2, name);
+      stmt.setInt(1, studentID);
+      stmt.setString(2, username);
+      stmt.setString(3, firstName);
+      stmt.setString(4, lastName);
       stmt.execute(); // Execute query
 
     } catch (Exception e) {
       e.printStackTrace();
     }
-
-    System.out.println("Successfully added student to database");
   }
 
   // List classes, with the # of students in each: list-classes
@@ -47,11 +46,5 @@ public class StudentManager {
       e.printStackTrace();
     }
     System.out.println("Successfully retrieved students from database");
-  }
-
-  public static void main(String[] args) {
-    StudentManager sg = new StudentManager();
-    sg.createStudent("ctudel", "Chris Tudela");
-    sg.getAllStudents();
   }
 }
