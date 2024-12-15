@@ -1,6 +1,4 @@
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -8,6 +6,9 @@ import java.sql.Statement;
  * Schema
  */
 public class Schema {
+  /**
+   * Reset the database
+   */
   public static void resetDatabase() {
     try {
       Connection connection = DB.getDatabaseConnection();
@@ -20,11 +21,31 @@ public class Schema {
     }
   }
 
+  /**
+   * Create all database tables
+   */
   public static void createTables() {
     try {
       Connection connection = DB.getDatabaseConnection();
       Statement stmt = connection.createStatement();
 
+      createClassTable(stmt);
+      createCategoryTable(stmt);
+      createStudentTable(stmt);
+      createRelations(connection); // Relationships for each 'main' table
+
+      connection.close();
+
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * @param stmt
+   */
+  public static void createClassTable(Statement stmt) {
+    try {
       System.out.println("Creating 'class' table...");
       stmt.execute(
           "CREATE TABLE class (" +
@@ -36,15 +57,32 @@ public class Schema {
               "UNIQUE(course_number, term, section_number)\n" +
               ");");
       System.out.println("Successfully created 'class' table");
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+  }
 
+  /**
+   * @param stmt
+   */
+  public static void createCategoryTable(Statement stmt) {
+    try {
       System.out.println("Creating 'category' table...");
       stmt.execute(
           "CREATE TABLE category (" +
-              "category_name varchar(255) PRIMARY KEY NOT NULL,\n" +
-              "weight double NOT NULL\n" +
+              "category_name varchar(255) PRIMARY KEY NOT NULL" +
               ");");
       System.out.println("Successfully created 'category' table");
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+  }
 
+  /**
+   * @param stmt
+   */
+  public static void createStudentTable(Statement stmt) {
+    try {
       System.out.println("Creating 'student' table...");
       stmt.execute(
           "CREATE TABLE student (" +
@@ -53,19 +91,16 @@ public class Schema {
               "name varchar(255) NOT NULL\n" +
               ");");
       System.out.println("Successfully created 'student' table");
-
-      System.out.println("Creating relationships...");
-      createRelations(connection); // Relationships for each 'main' table
-      System.out.println("Successfully created relationships");
-
-      connection.close();
-
     } catch (SQLException e) {
       e.printStackTrace();
     }
   }
 
+  /**
+   * @param connection
+   */
   public static void createRelations(Connection connection) {
+    System.out.println("Creating relationships...");
     try {
       Statement stmt = connection.createStatement();
 
@@ -83,11 +118,12 @@ public class Schema {
       System.out.println("Creating 'class_categories' table..."); // Class contains Cateogories
       stmt.execute(
           "CREATE TABLE class_categories (" +
-              "class_id int NOT NULL,\n" +
-              "category_name varchar(255),\n" +
-              "PRIMARY KEY (class_id, category_name),\n" +
-              "FOREIGN KEY (class_id) REFERENCES class(class_id),\n" +
-              "FOREIGN KEY (category_name) REFERENCES category(category_name)\n" +
+              "class_id int NOT NULL, " +
+              "category_name varchar(255), " +
+              "weight double NOT NULL, " +
+              "PRIMARY KEY (class_id, category_name), " +
+              "FOREIGN KEY (class_id) REFERENCES class(class_id), " +
+              "FOREIGN KEY (category_name) REFERENCES category(category_name)" +
               ");");
       System.out.println("Successfully created 'class_categories' table");
 
@@ -123,6 +159,7 @@ public class Schema {
       e.printStackTrace();
     }
 
+    System.out.println("Successfully created relationships");
   }
 
   // public static void create
