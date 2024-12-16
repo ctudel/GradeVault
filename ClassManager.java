@@ -232,27 +232,208 @@ public class ClassManager {
   // =============
   // Set Functions
   // =============
-  public void setClass(String course) {
+
+  /**
+   * @param course
+   * @return
+   */
+  public int setClass(String course) {
+    int classFound = 0;
     try {
       Connection conn = DB.getDatabaseConnection();
 
-      String query = "SELECT * FROM class c" +
+      String query = "SELECT * FROM class " +
           "WHERE course_number = ? " +
-          "AND term = ( " +
-
-          ") " +
-          "ORDER BY category_name;"; // "group by" category
+          "AND term = ( " + // get the current term
+          "SELECT term FROM class " +
+          "ORDER BY term DESC " +
+          "LIMIT 1 " +
+          ");";
 
       PreparedStatement stmt = conn.prepareStatement(query);
-      stmt.setInt(1, currClass.getClassId());
+      stmt.setString(1, course);
 
       ResultSet rs = stmt.executeQuery();
       ResultSetMetaData rsData = rs.getMetaData();
       int cols = rsData.getColumnCount();
 
+      // "class_id int PRIMARY KEY AUTO_INCREMENT,\n" +
+      // "course_number varchar(20) NOT NULL,\n" +
+      // "term varchar(4) NOT NULL,\n" +
+      // "section_number int NOT NULL,\n" +
+      // "description TEXT,\n" +
+      int classId = 0;
+      String currCourse = "";
+      String term = "";
+      int section = 0;
+      String description = "";
+
+      while (rs.next()) {
+        classFound = 1;
+        for (int i = 1; i <= cols; i++) {
+          String data = rs.getString(i);
+
+          if (i == 1)
+            classId = Integer.parseInt(data);
+          if (i == 2)
+            currCourse = data;
+          if (i == 3)
+            term = data;
+          if (i == 4)
+            section = Integer.parseInt(data);
+          if (i == 5)
+            description = data;
+        }
+
+        if (rs.next()) {
+          System.out.println("Failed to select class: Change term, or choose a specific section\n");
+          break;
+        }
+        currClass = new Class(classId, currCourse, term, section, description);
+        System.out.println("Successfully selected course\n");
+      }
+
+      if (classFound == 0)
+        System.out.println("Failed to select class: class does not exist in this term\n");
+
+      conn.close();
+
     } catch (Exception e) {
       e.printStackTrace();
     }
+
+    return classFound;
+  }
+
+  /**
+   * @param course
+   * @param term
+   * @return
+   */
+  public int setClass(String course, String term) {
+    int classFound = 0;
+    try {
+      Connection conn = DB.getDatabaseConnection();
+
+      String query = "SELECT * FROM class " +
+          "WHERE course_number = ? " +
+          "AND term = ?;";
+
+      PreparedStatement stmt = conn.prepareStatement(query);
+      stmt.setString(1, course);
+      stmt.setString(2, term);
+
+      ResultSet rs = stmt.executeQuery();
+      ResultSetMetaData rsData = rs.getMetaData();
+      int cols = rsData.getColumnCount();
+
+      int classId = 0;
+      String currCourse = "";
+      String currTerm = "";
+      int section = 0;
+      String description = "";
+
+      while (rs.next()) {
+        classFound = 1;
+        for (int i = 1; i <= cols; i++) {
+          String data = rs.getString(i);
+
+          if (i == 1)
+            classId = Integer.parseInt(data);
+          if (i == 2)
+            currCourse = data;
+          if (i == 3)
+            currTerm = data;
+          if (i == 4)
+            section = Integer.parseInt(data);
+          if (i == 5)
+            description = data;
+        }
+
+        if (rs.next()) {
+          System.out.println("Failed to select class: Change term, or choose a specific section\n");
+          break;
+        }
+        currClass = new Class(classId, currCourse, currTerm, section, description);
+        System.out.println("Successfully selected course\n");
+      }
+
+      if (classFound == 0)
+        System.out.println("Failed to select class: class does not exist in this term\n");
+
+      conn.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return classFound;
+  }
+
+  /**
+   * @param course
+   * @param term
+   * @param section
+   * @return
+   */
+  public int setClass(String course, String term, int section) {
+    int classFound = 0;
+    try {
+      Connection conn = DB.getDatabaseConnection();
+
+      String query = "SELECT * FROM class " +
+          "WHERE course_number = ? " +
+          "AND term = ? " +
+          "AND section_number = ?;";
+
+      PreparedStatement stmt = conn.prepareStatement(query);
+      stmt.setString(1, course);
+      stmt.setString(2, term);
+      stmt.setInt(3, section);
+
+      ResultSet rs = stmt.executeQuery();
+      ResultSetMetaData rsData = rs.getMetaData();
+      int cols = rsData.getColumnCount();
+
+      int classId = 0;
+      String currCourse = "";
+      String currTerm = "";
+      int currSection = 0;
+      String description = "";
+
+      while (rs.next()) {
+        classFound = 1;
+        for (int i = 1; i <= cols; i++) {
+          String data = rs.getString(i);
+
+          if (i == 1)
+            classId = Integer.parseInt(data);
+          if (i == 2)
+            currCourse = data;
+          if (i == 3)
+            currTerm = data;
+          if (i == 4)
+            currSection = Integer.parseInt(data);
+          if (i == 5)
+            description = data;
+        }
+
+        if (rs.next()) {
+          System.out.println("Failed to select class: Change term, or choose a specific section\n");
+          break;
+        }
+        currClass = new Class(classId, currCourse, currTerm, currSection, description);
+        System.out.println("Successfully selected course\n");
+      }
+
+      if (classFound == 0)
+        System.out.println("Failed to select class: class does not exist in this term\n");
+
+      conn.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return classFound;
   }
 
   // =============
@@ -311,7 +492,27 @@ public class ClassManager {
   // ================
   // Helper Functions
   // ================
-  public ResultSet queryAllCategories(Connection conn) {
+
+  public void showClass() {
+    try {
+      Connection conn = DB.getDatabaseConnection();
+
+      String query = "SELECT * FROM class " +
+          "WHERE class_id = ?;";
+
+      PreparedStatement stmt = conn.prepareStatement(query);
+      stmt.setInt(1, currClass.getClassId());
+
+      ResultSet rs = stmt.executeQuery();
+      ResultSetMetaData rsData = rs.getMetaData();
+      new TablePrinter().printTable(rs, rsData);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  private ResultSet queryAllCategories(Connection conn) {
     try {
       String query = "SELECT c.category_name, cc.weight " +
           "FROM category c " +
@@ -356,8 +557,8 @@ public class ClassManager {
   public static void main(String[] args) {
     ClassManager cm = new ClassManager();
     StudentManager sm = new StudentManager();
-    Class test = new Class(1, "CS402", "Sp20", 001, "");
-    Class test2 = new Class(2, "CSEC119", "Sp20", 001, "");
+    Class test = new Class(1, "CS410", "Sp24", 001, "");
+    // Class test2 = new Class(2, "CSEC119", "Sp20", 001, "");
 
     // Schema.resetDatabase();
     // Schema.createTables();
@@ -415,5 +616,9 @@ public class ClassManager {
 
     System.out.println("Getting grades...");
     sm.getGrades(cm.getCurrClass().getClassId(), "Jsmith");
+
+    System.out.println("Getting most current class...");
+    cm.setClass("CS410", "Sp24", 1);
+    cm.setClass("CS402", "Sp20", 1);
   }
 }
