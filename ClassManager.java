@@ -64,6 +64,27 @@ public class ClassManager {
     System.out.println("Successfully added class to database");
   }
 
+  public void createCategory(String name) {
+    try {
+      if (name.isBlank())
+        throw new SQLException("Category name");
+
+      Connection conn = DB.getDatabaseConnection();
+      String query = "INSERT INTO category (category_name) VALUES (?) " +
+          "ON DUPLICATE KEY UPDATE category_name = category_name;";
+
+      PreparedStatement stmt = conn.prepareStatement(query);
+      stmt.setString(1, new TablePrinter().formatString(name));
+
+      stmt.execute();
+      conn.close();
+
+    } catch (Exception e) {
+      System.out.println("Failed to add category: " + e.getMessage());
+      e.printStackTrace();
+    }
+  }
+
   public void createAssignment(String name, String category, double points, String description) {
     try {
       if (name.isBlank() || category.isBlank() || points < 0.0)
@@ -83,8 +104,7 @@ public class ClassManager {
       conn.close();
 
     } catch (Exception e) {
-      System.out.println("Failed to add category: " + e.getMessage());
-      e.printStackTrace();
+      System.out.println("Failed to create assignment");
     }
   }
 
@@ -123,13 +143,64 @@ public class ClassManager {
 
       ResultSetMetaData rsData = rs.getMetaData();
 
-      new TablePrinter().printTable(rs, rsData);
+      System.out.println();
+      int cols = rsData.getColumnCount();
+      int chars = 0;
+
+      // Print column names
+      for (int i = 1; i <= cols; i++) {
+        String colName = rsData.getColumnName(i);
+        System.out.print(colName + " | " + "  ");
+        chars += colName.length() + 5;
+      }
+      System.out.print('\n');
+
+      // Print line
+      for (int i = 0; i < chars; i++) {
+        System.out.print("-");
+      }
+      System.out.print('\n');
+
+      // Print each row of data
+      while (rs.next()) {
+        for (int i = 1; i <= cols; i++) {
+          if (i == 2)
+            System.out.print(rs.getString(i) + "%" + "\t");
+          else
+            System.out.print(rs.getString(i) + "\t");
+        }
+        System.out.print('\n');
+      }
+      System.out.print('\n');
 
       conn.close();
 
     } catch (SQLException e) {
       e.printStackTrace();
     }
+  }
+
+  public boolean getCategory(String name) {
+    try {
+      Connection conn = DB.getDatabaseConnection();
+
+      String query = "SELECT * FROM category " +
+          "WHERE category_name = ?" +
+          ";";
+
+      PreparedStatement stmt = conn.prepareStatement(query);
+      stmt.setString(1, name);
+
+      ResultSet rs = stmt.executeQuery();
+
+      return (rs.next()) ? true : false;
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    return false;
+
   }
 
   public void getStudents() {
@@ -174,6 +245,22 @@ public class ClassManager {
       ResultSet rs = stmt.executeQuery();
       ResultSetMetaData rsData = rs.getMetaData();
       int cols = rsData.getColumnCount();
+      int chars = 0;
+
+      // Print column names
+      System.out.print("\n");
+      for (int i = 1; i <= cols; i++) {
+        String colName = rsData.getColumnName(i);
+        System.out.print(colName + " | " + "  ");
+        chars += colName.length() + 5;
+      }
+      System.out.print("\n");
+
+      // Print horizontal line
+      for (int i = 0; i < chars; i++) {
+        System.out.print("-");
+      }
+      System.out.print("\n\n");
 
       // Sort by category per string for printing
       while (rs.next()) {
@@ -214,11 +301,22 @@ public class ClassManager {
     try {
       Connection conn = DB.getDatabaseConnection();
 
-      String query = "SELECT * FROM student_assignments";
+      String query = "SELECT " +
+          "s.username, " +
+          "s.studentID, " +
+          "s.first_name, " +
+          "s.last_name, " +
+          "CONCAT(ROUND(AVG((sa.grade / a.point_value) * 100), 1), '%') AS 'total grade' " +
+          "FROM student s " +
+          "JOIN student_assignments sa ON s.username = sa.username " +
+          "JOIN assignment a ON sa.assignment_name = a.assignment_name AND sa.class_id = a.class_id " +
+          "WHERE sa.class_id = ? " +
+          "GROUP BY s.username, s.studentID, s.first_name, s.last_name;";
 
-      Statement stmt = conn.createStatement();
+      PreparedStatement stmt = conn.prepareStatement(query);
+      stmt.setInt(1, currClass.getClassId());
 
-      ResultSet rs = stmt.executeQuery(query);
+      ResultSet rs = stmt.executeQuery();
       ResultSetMetaData rsData = rs.getMetaData();
       new TablePrinter().printTable(rs, rsData);
 
@@ -257,11 +355,6 @@ public class ClassManager {
       ResultSetMetaData rsData = rs.getMetaData();
       int cols = rsData.getColumnCount();
 
-      // "class_id int PRIMARY KEY AUTO_INCREMENT,\n" +
-      // "course_number varchar(20) NOT NULL,\n" +
-      // "term varchar(4) NOT NULL,\n" +
-      // "section_number int NOT NULL,\n" +
-      // "description TEXT,\n" +
       int classId = 0;
       String currCourse = "";
       String term = "";
@@ -450,18 +543,19 @@ public class ClassManager {
 
       Connection conn = DB.getDatabaseConnection();
 
-      String query = "INSERT INTO class_categories VALUES (?,?,?);";
+      String query = "INSERT INTO class_categories VALUES (?,?,?) " +
+          "ON DUPLICATE KEY UPDATE weight = ?;";
       PreparedStatement stmt = conn.prepareStatement(query);
 
       stmt.setInt(1, currClass.getClassId());
       stmt.setString(2, new TablePrinter().formatString(name));
       stmt.setDouble(3, weight);
+      stmt.setDouble(4, weight);
       stmt.execute();
 
       conn.close();
 
     } catch (Exception e) {
-      e.printStackTrace();
     }
   }
 
@@ -557,68 +651,119 @@ public class ClassManager {
   public static void main(String[] args) {
     ClassManager cm = new ClassManager();
     StudentManager sm = new StudentManager();
-    Class test = new Class(1, "CS410", "Sp24", 001, "");
-    // Class test2 = new Class(2, "CSEC119", "Sp20", 001, "");
 
-    // Schema.resetDatabase();
-    // Schema.createTables();
+    System.out.println("Resetting and creating database tables...");
+    Schema.resetDatabase();
+    Schema.createTables();
 
-    // System.out.println("Creating test class...");
-    // cm.createClass(test.getCourse(), test.getTerm(), test.getSection(),
-    // test.getDescription());
+    // Create multiple classes
+    Class[] classes = {
+        new Class(1, "CS410", "Sp24", 001, "Databases"),
+        new Class(2, "CS402", "Sp20", 001, "Mobile Development"),
+    };
 
-    System.out.println("Setting class...");
-    cm.setCurrClass(test);
+    System.out.println("\nCreating classes...");
+    for (Class c : classes) {
+      System.out.println("Creating class: " + c.getCourse() + " " + c.getTerm() + "Section " + c.getSection());
+      cm.createClass(c.getCourse(), c.getTerm(), c.getSection(),
+          c.getDescription());
+    }
 
-    // // Create assignment and categories
-    // System.out.println("Creating 'homework' category");
-    // new Category().createCategory("homework");
-    // System.out.println("Adding category");
-    // cm.addCategory("homework", 20.0);
-    // System.out.println("Creating Assignment...");
-    // cm.createAssignment("First Homework", "homework", 10, "");
-    //
-    // // Create assignment and categories
-    // System.out.println("Creating 'homework' category");
-    // new Category().createCategory("quiz");
-    // System.out.println("Adding category");
-    // cm.addCategory("quiz", 30.0);
-    // System.out.println("Creating Assignment...");
-    // cm.createAssignment("First Quiz", "Quiz", 10, "");
-    // cm.createAssignment("Second Quiz", "quiz", 10, "");
-    //
-    // // Create and enroll students
-    // System.out.println("Creating Student...");
-    // sm.createStudent(1234, "ctudel", "Chris", "Tudela");
-    // sm.createStudent(1235, "jsmith", "John", "Smith");
-    // System.out.println("Enrolling Student...");
-    // cm.addStudent("ctudel");
-    // cm.addStudent("jsmith");
-    //
-    // // Assigning grade to student
-    // System.out.println("Assigning grade to student");
-    // sm.addGrade("First Homework", cm.getCurrClass().getClassId(), "Ctudel", 10);
-    // sm.addGrade("First Homework", cm.getCurrClass().getClassId(), "jsmith", 10);
-    // sm.addGrade("First Quiz", cm.getCurrClass().getClassId(), "Jsmith", 7.5);
-    // sm.addGrade("Second Quiz", cm.getCurrClass().getClassId(), "Jsmith", 8.5);
+    // Create students
+    String[][] students = {
+        { "1234", "ctudel", "Chris", "Tudela" },
+        { "1235", "jsmith", "John", "Smith" },
+        { "1236", "agarcia", "Ana", "Garcia" },
+        { "1237", "mlee", "Mike", "Lee" },
+        { "1238", "sjohnson", "Sarah", "Johnson" },
+        { "1239", "rkim", "Rachel", "Kim" },
+        { "1240", "dchen", "David", "Chen" },
+        { "1241", "lbrown", "Lisa", "Brown" }
+    };
 
-    System.out.println("Getting classes...\n");
+    System.out.println("\nCreating students...");
+    for (String[] student : students) {
+      System.out.println("Creating student: " + student[2] + " " + student[3] + "(" + student[1] + ")");
+      sm.createStudent(Integer.parseInt(student[0]), student[1], student[2],
+          student[3]);
+    }
+
+    // For each class, add categories, assignments, and enroll students
+    for (Class c : classes) {
+      System.out.println("\nSetting current class to: " + c.getCourse() + " " +
+          c.getTerm());
+      cm.setCurrClass(c);
+
+      // Create categories
+      String[] categories = { "homework", "quiz", "exam", "project" };
+      double[] weights = { 20.0, 30.0, 40.0, 10.0 };
+      System.out.println("Creating categories for " + c.getCourse() + ":");
+      for (int i = 0; i < categories.length; i++) {
+        System.out.println(" - Creating category: " + categories[i] + " (weight: " +
+            weights[i] + "%)");
+        cm.createCategory(categories[i]);
+        cm.addCategory(categories[i], weights[i]);
+      }
+
+      // Create assignments
+      String[][] assignments = {
+          { "Homework 1", "homework", "10" },
+          { "Homework 2", "homework", "15" },
+          { "Quiz 1", "quiz", "20" },
+          { "Quiz 2", "quiz", "25" },
+          { "Midterm Exam", "exam", "100" },
+          { "Final Project", "project", "50" }
+      };
+
+      System.out.println("Creating assignments for " + c.getCourse() + ":");
+      for (String[] assignment : assignments) {
+        System.out.println(
+            " - Creating assignment: " + assignment[0] + " (" + assignment[1] + ", " +
+                assignment[2] + " points)");
+        cm.createAssignment(assignment[0], assignment[1],
+            Integer.parseInt(assignment[2]), "");
+      }
+
+      // Enroll students (varying number per class)
+      int numStudents = 5 + (int) (Math.random() * 4); // 5 to 8 students per class
+      System.out.println("Enrolling students in " + c.getCourse() + ":");
+      for (int i = 0; i < numStudents; i++) {
+        System.out.println(" - Enrolling student: " + students[i][1]);
+        cm.addStudent(students[i][1]);
+      }
+
+      // Assign grades
+      System.out.println("Assigning grades for " + c.getCourse() + ":");
+      for (int i = 0; i < numStudents; i++) {
+        for (String[] assignment : assignments) {
+          double maxPoints = Integer.parseInt(assignment[2]);
+          double grade = Math.round(Math.random() * Integer.parseInt(assignment[2]) *
+              10.0) / 10.0;
+          grade = Math.min(grade, maxPoints);
+          System.out.println(" - Assigning grade for " + students[i][1] + " in " +
+              assignment[0] + ": " + grade);
+          sm.addGrade(assignment[0], c.getClassId(), students[i][1], grade);
+        }
+      }
+    }
+    cm.setClass("CS410");
+
+    System.out.println("\nGetting all classes...");
     cm.getAllClasses();
 
-    System.out.println("Getting categories...");
+    System.out.println("\nGetting categories for the last class...");
     cm.getCategories();
 
-    System.out.println("Getting students...");
+    System.out.println("\nGetting students for the last class...");
     cm.getStudents();
 
-    System.out.println("Getting assignments...");
+    System.out.println("\nGetting assignments for the last class...");
     cm.getAssignments();
 
-    System.out.println("Getting grades...");
-    sm.getGrades(cm.getCurrClass().getClassId(), "Jsmith");
+    System.out.println("\nGetting grades for the first student in the first class...");
+    sm.getGrades(classes[0].getClassId(), students[0][1]);
 
-    System.out.println("Getting most current class...");
+    System.out.println("\nSetting the most current class...");
     cm.setClass("CS410", "Sp24", 1);
-    cm.setClass("CS402", "Sp20", 1);
   }
 }

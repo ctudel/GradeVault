@@ -92,6 +92,101 @@ public class StudentManager {
     }
   }
 
+  public boolean getStudent(String username, int studentID) {
+    try {
+      Connection conn = DB.getDatabaseConnection();
+
+      String query = "SELECT * FROM student " +
+          "WHERE studentID = ? OR username = ?" +
+          ";";
+
+      PreparedStatement stmt = conn.prepareStatement(query);
+      stmt.setInt(1, studentID);
+      stmt.setString(2, username);
+
+      ResultSet rs = stmt.executeQuery();
+
+      return (rs.next()) ? true : false;
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    return false;
+
+  }
+
+  public boolean getStudent(String username) {
+    try {
+      Connection conn = DB.getDatabaseConnection();
+
+      String query = "SELECT * FROM enrolled_students " +
+          "WHERE username = ?" +
+          ";";
+
+      PreparedStatement stmt = conn.prepareStatement(query);
+      stmt.setString(1, username);
+
+      ResultSet rs = stmt.executeQuery();
+
+      return (rs.next()) ? true : false;
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    return false;
+
+  }
+
+  public void searchStudent(String searchStr) {
+    try {
+      Connection conn = DB.getDatabaseConnection();
+
+      String query = "SELECT * FROM student " +
+          "WHERE username LIKE ? OR first_name LIKE ? OR last_name LIKE ?;";
+
+      PreparedStatement stmt = conn.prepareStatement(query);
+
+      String likeStr = "%" + searchStr + "%";
+      stmt.setString(1, likeStr);
+      stmt.setString(2, likeStr);
+      stmt.setString(3, likeStr);
+
+      ResultSet rs = stmt.executeQuery();
+      ResultSetMetaData rsData = rs.getMetaData();
+
+      new TablePrinter().printTable(rs, rsData);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  public boolean inClass(String username, int classId) {
+    try {
+      Connection conn = DB.getDatabaseConnection();
+
+      String query = "SELECT * FROM enrolled_students " +
+          "WHERE class_id = ? AND username = ?" +
+          ";";
+
+      PreparedStatement stmt = conn.prepareStatement(query);
+      stmt.setInt(1, classId);
+      stmt.setString(2, username);
+
+      ResultSet rs = stmt.executeQuery();
+
+      return (rs.next()) ? true : false;
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    return false;
+
+  }
+
   /**
   * 
   */
@@ -159,7 +254,7 @@ public class StudentManager {
           }
           if (i == 3) {
             grade = Double.parseDouble(data);
-            gradeStr += grade * 10 + "% ";
+            gradeStr += grade + "% ";
           }
           if (i == 4) {
             pointVal = Double.parseDouble(data);
